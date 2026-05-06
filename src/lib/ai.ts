@@ -330,12 +330,34 @@ INSTRUCTIONS:
       break;
     }
 
-    const extractedSkills = Array.from(new Set([
-      ...(parsed.extracted_requirements?.skills || []),
-      ...(parsed.extracted_requirements?.tools || []),
-      ...(parsed.extracted_requirements?.soft_traits || []),
-      ...(mode === 'tech' && Array.isArray(parsed.enhancement_tags) ? parsed.enhancement_tags : [])
+    const rawExtracted = {
+      reqSkills: parsed.extracted_requirements?.skills || [],
+      reqTools: parsed.extracted_requirements?.tools || [],
+      reqSoftTraits: parsed.extracted_requirements?.soft_traits || [],
+      enhancementTags: Array.isArray(parsed.enhancement_tags) ? parsed.enhancement_tags : [],
+      generatedSkills: Array.isArray(parsed.skills) ? parsed.skills : [],
+      projectTech: (Array.isArray(parsed.projects) ? parsed.projects : [])
+        .flatMap((p: any) => Array.isArray(p.tech) ? p.tech : [])
+    };
+
+    console.log('[EXTRACTED_SKILLS_SOURCES]', JSON.stringify(rawExtracted, null, 2));
+
+    let extractedSkills = Array.from(new Set([
+      ...rawExtracted.reqSkills,
+      ...rawExtracted.reqTools,
+      ...rawExtracted.reqSoftTraits,
+      ...rawExtracted.enhancementTags
     ]));
+
+    // Fallback: if AI didn't return extraction data, derive from generated skills + project tech
+    if (extractedSkills.length === 0) {
+      extractedSkills = Array.from(new Set([
+        ...rawExtracted.generatedSkills,
+        ...rawExtracted.projectTech
+      ]));
+    }
+
+    console.log('[EXTRACTED_SKILLS_FINAL]', extractedSkills.length, 'skills:', extractedSkills);
 
     return {
       summary: parsed.summary,
